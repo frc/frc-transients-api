@@ -1,0 +1,16 @@
+{
+    "name": "frc/frc-transients-api",
+    "authors": [
+        {
+            "name": "Janne Aalto",
+            "email": "janne.aalto@frantic.com"
+        }
+    ],
+    "license": "GPL v3",
+    "description": "frc-transient-api",
+    "type": "wordpress-plugin",
+    "repositories": [
+    ],
+    "require": {
+    }
+}
