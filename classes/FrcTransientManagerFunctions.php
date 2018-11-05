@@ -245,57 +245,6 @@ class FrcTransientManagerFunctions extends FrcTransientManagerBase {
         }
     }
 
-
-    public function setPostData($post_id, $post = false, $locale = false, $expiration = false) {
-        if (function_exists('pll_get_post_language')) {
-            $post_locale = pll_get_post_language($post_id, 'locale');
-        } else {
-            $post_locale = get_option('WPLANG');
-        }
-
-        if ($locale != false) {
-            $post_locale = $locale;
-        }
-
-        $post_id        = intval($post_id);
-        $transient_name = '(' . $post_id . ')-postData';
-
-        if (!($post instanceof WP_Post)) {
-            $post = get_post($post_id);
-        }
-        if ($post) {
-            $post->{'permalink'} = get_permalink($post);
-            $post->{'image'}     = Frc\ImageAttachment::fromAttachmentId(get_post_meta($post->ID, '_thumbnail_id', true));
-            $this->setTransient($transient_name, $post, $post_locale, $expiration);
-        }
-    }
-
-    public function getPostData($post_id, $locale = false, $expiration = false) {
-        if (!$post_id) {
-            return null;
-        }
-
-        if (!$locale) {
-            $locale = $this->getLocale();
-        }
-
-        $post_id = intval($post_id);
-        $transient_name = '(' . $post_id . ')-postData';
-        $post_data = $this->getTransient($transient_name, $locale);
-        if ($post_data) {
-            return $post_data;
-        } else {
-            $post_data = get_post($post_id);
-            if (!empty($post_data)) {
-                $post_data->{'permalink'} = get_permalink($post_data);
-                $post_data->{'image'} = Frc\ImageAttachment::fromAttachmentId(get_post_meta($post_data->ID, '_thumbnail_id', true));
-                return $this->setTransient($transient_name, $post_data, $locale, $expiration);
-            }
-        }
-
-        return null;
-    }
-
     private function normalizeAcfPostId($post_id) {
         if ($post_id == 'option') {
             return 'options';
