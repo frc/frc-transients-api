@@ -29,8 +29,10 @@ function frcTransient() {
     return Frc\FrcTransientManagerFunctions::getInstance($enable, false);
 }
 
-// Global for backwards compatibility.
-$GLOBALS['frcTransient'] = frcTransient();
+add_action('plugins_loaded', function(){
+    $GLOBALS['frcTransient'] = frcTransient();
+}, 99999);
+
 
 /**
  * @param $post_id
