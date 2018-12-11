@@ -133,7 +133,7 @@ class FrcTransientManagerBase {
      * @return int
      */
     protected function getExpiration() {
-        return env('TRANSIENT_EXPIRATION') ?: YEAR_IN_SECONDS;
+        return getenv('TRANSIENT_EXPIRATION') ?: YEAR_IN_SECONDS;
     }
 
     /**
