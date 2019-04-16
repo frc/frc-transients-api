@@ -1,12 +1,12 @@
 {
-    "name": "frc/frc-transients-api",
+    "name": "frc/wp-transients-api",
     "authors": [
         {
             "name": "Janne Aalto",
             "email": "janne.aalto@frantic.com"
         }
     ],
-    "license": "GPL v3",
+    "license": "MIT",
     "description": "frc-transient-api",
     "type": "wordpress-muplugin",
     "repositories": [
