@@ -100,9 +100,9 @@ class FrcTransientManagerBase {
         if ($this->log) {
             if ($function != '') {
                 $function = str_pad($function, 25, " ", STR_PAD_LEFT);
-                $function = $function . ' ';
+                $function = $function . ': ';
             }
-            error_log(print_r('frc-transient-manager: ' . $function . $message, true));
+            error_log(print_r('frc-transient-manager ' . $function . $message, true));
         }
     }
 
