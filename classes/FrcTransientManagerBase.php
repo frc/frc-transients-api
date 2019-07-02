@@ -46,6 +46,7 @@ class FrcTransientManagerBase {
     protected $logged_in_suffix = '';
     protected $acf_fields;
     protected $post_data;
+    protected $log = false;
 
     /**
      * TransientObject constructor.
@@ -84,6 +85,16 @@ class FrcTransientManagerBase {
      */
     public function isCacheMessages():bool {
         return $this->cache_messages;
+    }
+
+    public function enableLog() {
+        $this->log = true;
+    }
+
+    public function logMessage($message) {
+        if ($this->log) {
+            error_log(print_r($message, true));
+        }
     }
 
     /**
@@ -210,16 +221,22 @@ class FrcTransientManagerBase {
      *
      * @return bool|mixed
      */
-    protected function setTransientKeys($content = false, $locale = false, $expiration = false) {
+    protected function setTransientKeys($content = false, $locale = false) {
 
         if (false === $content) {
-            return null;
+            $content = [];
         }
-        if (false === $expiration) {
-            $expiration = $this->getExpiration();
-        }
+
         $key = $this->generateTransientKey($this->optionName(), $locale);
-        set_transient($key, $content, $expiration);
+
+        $this->logMessage('========= setTransientKeys =========');
+        $this->logMessage('count: ' . count($content));
+        $this->logMessage('locale: ' . $locale);
+        $this->logMessage('key: ' . $key);
+        $this->logMessage('================================');
+
+
+        set_transient($key, $content, 0);
 
         return $content;
     }
@@ -232,6 +249,17 @@ class FrcTransientManagerBase {
      */
     protected function updateTransientKeys($new_transient_key, $locale = false) {
         $transient_keys = $this->getTransientKeys($locale);
+
+        $this->logMessage('========= updateTransientKeys =========');
+        $this->logMessage('before count: ' . count($transient_keys));
+        $this->logMessage('locale: ' . $locale);
+        $this->logMessage('add: ' . $new_transient_key);
+        if (in_array($new_transient_key, $transient_keys)) {
+            $this->logMessage('!!already in!!');
+        }
+        $this->logMessage('================================');
+
+
         if (!in_array($new_transient_key, $transient_keys)) {
             $transient_keys[] = $new_transient_key;
             $transient_keys   = array_values($transient_keys);
@@ -251,12 +279,28 @@ class FrcTransientManagerBase {
         // Get the current list of transients.
         $transient_keys = $this->getTransientKeys($locale);
 
+        $count = count($transient_keys);
+
+        $this->logMessage('========= deleteTransientKey =========');
+        $this->logMessage('before count: ' . $count);
+        $this->logMessage('locale: ' . $locale);
+        $this->logMessage('remove: ' . $transient_key);
+
+
         $transient_keys = array_filter($transient_keys, function ($e) use ($transient_key) {
             return ($e != $transient_key);
         });
 
-        $transient_keys = array_values($transient_keys);
-        $this->setTransientKeys($transient_keys, $locale);
+        $filter = count($transient_keys);
+
+        if ($filter < $count) {
+            $transient_keys = array_values($transient_keys);
+            $this->setTransientKeys($transient_keys, $locale);
+        } else {
+            $this->logMessage('!!not found!!');
+        }
+
+        $this->logMessage('================================');
 
         return true;
     }
@@ -319,6 +363,13 @@ class FrcTransientManagerBase {
             $cache_message = preg_replace('/ -->/', ': ' . $transient_name . ' with locale ' . $locale . ' -->', $cache_message);
             echo $cache_message;
         }
+
+        $this->logMessage('========= setTransient =========');
+        $this->logMessage('transient: ' . $transient_name);
+        $this->logMessage('locale: ' . $locale);
+        $this->logMessage('key: ' . $key);
+        $this->logMessage('================================');
+
         set_transient($key, $content, $expiration);
 
         return $content;
@@ -343,6 +394,12 @@ class FrcTransientManagerBase {
             $key = $transient_name;
         }
         $this->deleteTransientKey($key, $locale);
+
+        $this->logMessage('========= deleteTransient =========');
+        $this->logMessage('transient: ' . $transient_name);
+        $this->logMessage('locale: ' . $locale);
+        $this->logMessage('key: ' . $key);
+        $this->logMessage('================================');
 
         return delete_transient($key);
     }
@@ -414,37 +471,35 @@ class FrcTransientManagerBase {
         if (empty($transient_name)) {
             return null;
         }
-        $log = false;
-        if ($transient_name == 'primary_nav') {
-            $log = true;
-            error_log(print_r('deleteTransientsLike primary_nav', true));
-        }
+
         $transient_keys = $this->getTransientKeys($locale);
         //magic, don't touch
         $input      = preg_quote($transient_name, '~');
         $transients = preg_grep('~' . $input . '~', $transient_keys);
-        if (empty($transients)) {
-            if ($log) {
-                error_log(print_r('found 0 keys', true));
-            }
 
+        if (empty($transients)) {
+            $this->logMessage('========= deleteTransientsLike =========');
+            $this->logMessage('not found in transient keys list: ' . $transient_name);
+            $this->logMessage('========================================');
             return null;
         }
 
-        if (!empty($transients) && $log) {
-            error_log(print_r('found ' . count($transients) . ' keys', true));
+        $this->logMessage('========= deleteTransientsLike =========');
+        $this->logMessage('delete transient like: ' . $transient_name);
+        if (!empty($transients)) {
+            $this->logMessage('found ' . count($transients) . ' keys');
         }
-
         // Remove all transients found one by one
         foreach ($transients as $key => $transient) {
             $arr                = explode('|', $transient);
             $transientKeyLocale = $arr[1];
-            if ($log) {
-                error_log(print_r('locale from key: ' . $transientKeyLocale, true));
-                error_log(print_r('transient key: ' . $transient, true));
-            }
+            $this->logMessage('delete transient: ' . $transient);
+            $this->logMessage('locale: ' . $transientKeyLocale);
+            $this->logMessage('function locale: ' . $locale);
+            $this->logMessage('caller locale: ' . $this->getLocale());
             $this->deleteTransient($transient, $transientKeyLocale, true);
         }
+        $this->logMessage('========================================');
 
         return true;
     }
