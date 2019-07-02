@@ -2,9 +2,32 @@
 
 namespace Frc;
 
-if (! defined('ABSPATH')) {
+use function array_filter;
+use function array_push;
+use function array_values;
+use function count;
+use function defined;
+use function delete_transient;
+use function error_log;
+use function explode;
+use function function_exists;
+use function get_locale;
+use function get_transient;
+use function getenv;
+use function in_array;
+use function is_preview;
+use function is_user_logged_in;
+use function pll_languages_list;
+use function preg_grep;
+use function preg_quote;
+use function preg_replace;
+use function print_r;
+use function set_transient;
+
+if (!defined('ABSPATH')) {
     exit; // Exit if accessed directly.
 }
+
 /**
  * Transient Extensions with Polylang Support
  *
@@ -19,7 +42,8 @@ class FrcTransientManagerBase {
     protected $db_prefix;
     protected $locale;
     protected $prefix;
-    protected $logged_in_suffix;
+    protected $suffix = '';
+    protected $logged_in_suffix = '';
     protected $acf_fields;
     protected $post_data;
 
@@ -44,28 +68,28 @@ class FrcTransientManagerBase {
     /**
      * @return bool
      */
-    public function isEnable(): bool {
+    public function isEnable():bool {
         return $this->enable;
     }
 
     /**
      * @param bool $enable
      */
-    public function setEnable(bool $enable): void {
+    public function setEnable(bool $enable):void {
         $this->enable = $enable;
     }
 
     /**
      * @return bool
      */
-    public function isCacheMessages(): bool {
+    public function isCacheMessages():bool {
         return $this->cache_messages;
     }
 
     /**
      * @param bool $cache_messages
      */
-    public function setCacheMessages(bool $cache_messages): void {
+    public function setCacheMessages(bool $cache_messages):void {
         $this->cache_messages = $cache_messages;
     }
 
@@ -77,6 +101,7 @@ class FrcTransientManagerBase {
      */
     protected function dbPrefix() {
         global $wpdb;
+
         return $wpdb->prefix;
     }
 
@@ -86,20 +111,20 @@ class FrcTransientManagerBase {
      * @return string
      */
     protected function transientPrefix($locale = false) {
-        if (! $locale) {
+        if (!$locale) {
             $locale = $this->locale;
         }
 
-        return $this->db_prefix . $locale . '_';
+        return $this->db_prefix . '|' . $locale . '|';
     }
 
     /**
      * @return string
      */
     protected function transientSuffix() {
-        $suffix = '';
+        $suffix = '|' . $this->suffix;
         if (is_user_logged_in()) {
-            $suffix = $this->logged_in_suffix;
+            $suffix = '|' . $this->logged_in_suffix;
         }
 
         return $suffix;
@@ -116,7 +141,7 @@ class FrcTransientManagerBase {
      * @return array
      */
     protected function getAllLocales() {
-        $locales = [ $this->locale ];
+        $locales = [$this->locale];
         if (function_exists('pll_languages_list')) {
             $args    = [
                 'fields' => 'locale',
@@ -172,7 +197,7 @@ class FrcTransientManagerBase {
     public function getAllTransientKeys() {
         $return = [];
         foreach ($this->getAllLocales() as $locale) {
-            $return[ $locale ] = $this->getTransientKeys($locale);
+            $return[$locale] = $this->getTransientKeys($locale);
         }
 
         return $return;
@@ -206,7 +231,7 @@ class FrcTransientManagerBase {
      */
     protected function updateTransientKeys($new_transient_key, $locale = false) {
         $transient_keys = $this->getTransientKeys($locale);
-        if (! in_array($new_transient_key, $transient_keys)) {
+        if (!in_array($new_transient_key, $transient_keys)) {
             $transient_keys[] = $new_transient_key;
             $this->setTransientKeys($transient_keys, $locale);
         }
@@ -224,7 +249,7 @@ class FrcTransientManagerBase {
         // Get the current list of transients.
         $transient_keys = $this->getTransientKeys($locale);
         $transient_keys = array_filter($transient_keys, function ($e) use ($transient_key) {
-            return ( $e !== $transient_key );
+            return ($e !== $transient_key);
         });
         $transient_keys = array_values($transient_keys);
         $this->setTransientKeys($transient_keys, $locale);
@@ -239,13 +264,13 @@ class FrcTransientManagerBase {
      * @return mixed
      */
     public function getTransient($transient_name = false, $locale = false) {
-        if (is_preview() || ! $this->enable) {
+        if (is_preview() || !$this->enable) {
             return null;
         }
 
         $data = get_transient($this->generateTransientKey($transient_name, $locale));
 
-        if ($this->isCacheMessages() && ( WP_DEBUG && ! empty($transient_name) && $data != false )) {
+        if ($this->isCacheMessages() && (WP_DEBUG && !empty($transient_name) && $data != false)) {
             $cache_message = '<!-- Served from cache -->';
             $cache_message = preg_replace('/ -->/', ': ' . $transient_name . ' from locale ' . $locale . ' -->', $cache_message);
             echo $cache_message;
@@ -273,6 +298,7 @@ class FrcTransientManagerBase {
 
         if (empty($content)) {
             $this->deleteTransient($transient_name, $locale);
+
             return null;
         }
 
@@ -284,7 +310,7 @@ class FrcTransientManagerBase {
         }
         $key = $this->generateTransientKey($transient_name, $locale);
         $this->updateTransientKeys($key, $locale);
-        if ($this->isCacheMessages() && ( WP_DEBUG && ! empty($transient_name) )) {
+        if ($this->isCacheMessages() && (WP_DEBUG && !empty($transient_name))) {
             $cache_message = '<!-- Served from cache -->';
             $cache_message = preg_replace('/ -->/', ': ' . $transient_name . ' with locale ' . $locale . ' -->', $cache_message);
             echo $cache_message;
@@ -298,13 +324,20 @@ class FrcTransientManagerBase {
      * @param bool|string $transient_name
      * @param bool|string $locale
      *
+     * @param bool $keyGenerated
+     *
      * @return bool
      */
-    public function deleteTransient($transient_name = false, $locale = false) {
+    public function deleteTransient($transient_name = false, $locale = false, $keyGenerated = false) {
         if (empty($transient_name)) {
             return null;
         }
-        $key = $this->generateTransientKey($transient_name, $locale);
+
+        if (!$keyGenerated) {
+            $key = $this->generateTransientKey($transient_name, $locale);
+        } else {
+            $key = $transient_name;
+        }
         $this->deleteTransientKey($key, $locale);
 
         return delete_transient($key);
@@ -323,7 +356,7 @@ class FrcTransientManagerBase {
             return true;
         }
         foreach ($transient_keys as $t) {
-            delete_transient($t);
+            $this->deleteTransient($t, $locale, true);
         }
         $this->setTransientKeys([], $locale);
 
@@ -359,8 +392,9 @@ class FrcTransientManagerBase {
             return null;
         }
         foreach ($transients as $key => $transient) {
-            delete_transient($transient);
-            unset($transient_keys[ $key ]);
+            $arr                = explode('|', $transient);
+            $transientKeyLocale = $arr[1];
+            $this->deleteTransient($transient, $transientKeyLocale, true);
         }
         $transient_keys = array_values($transient_keys);
         $this->setTransientKeys($transient_keys, $locale);
@@ -378,17 +412,36 @@ class FrcTransientManagerBase {
         if (empty($transient_name)) {
             return null;
         }
+        $log = false;
+        if ($transient_name == 'primary_nav') {
+            $log = true;
+            error_log(print_r('deleteTransientsLike primary_nav', true));
+        }
         $transient_keys = $this->getTransientKeys($locale);
         //magic, don't touch
         $input      = preg_quote($transient_name, '~');
         $transients = preg_grep('~' . $input . '~', $transient_keys);
         if (empty($transients)) {
+            if ($log) {
+                error_log(print_r('found 0 keys', true));
+            }
+
             return null;
         }
+
+        if (!empty($transients) && $log) {
+            error_log(print_r('found ' . count($transients) . ' keys', true));
+        }
+
         // Remove all transients found one by one
         foreach ($transients as $key => $transient) {
-            delete_transient($transient);
-            unset($transient_keys[ $key ]);
+            $arr                = explode('|', $transient);
+            $transientKeyLocale = $arr[1];
+            if ($log) {
+                error_log(print_r('locale from key: ' . $transientKeyLocale, true));
+                error_log(print_r('transient key: ' . $transient, true));
+            }
+            $this->deleteTransient($transient, $transientKeyLocale, true);
         }
         $transient_keys = array_values($transient_keys);
         $this->setTransientKeys($transient_keys, $locale);
