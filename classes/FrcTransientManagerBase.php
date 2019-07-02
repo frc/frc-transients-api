@@ -98,9 +98,9 @@ class FrcTransientManagerBase {
      */
     public function logMessage($message, $function = '') {
         if ($this->log) {
-            if ($function != '' && strlen($function) < 24) {
-                $function = str_pad($function, 25 - strlen($function), " ", STR_PAD_LEFT);
-                $function = $function.' ';
+            if ($function != '') {
+                $function = str_pad($function, 25, " ", STR_PAD_LEFT);
+                $function = $function . ' ';
             }
             error_log(print_r('frc-transient-manager: ' . $function . $message, true));
         }
