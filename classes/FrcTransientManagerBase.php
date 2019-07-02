@@ -211,6 +211,7 @@ class FrcTransientManagerBase {
      * @return bool|mixed
      */
     protected function setTransientKeys($content = false, $locale = false, $expiration = false) {
+
         if (false === $content) {
             return null;
         }
@@ -233,6 +234,7 @@ class FrcTransientManagerBase {
         $transient_keys = $this->getTransientKeys($locale);
         if (!in_array($new_transient_key, $transient_keys)) {
             $transient_keys[] = $new_transient_key;
+            $transient_keys   = array_values($transient_keys);
             $this->setTransientKeys($transient_keys, $locale);
         }
 
@@ -248,9 +250,11 @@ class FrcTransientManagerBase {
     protected function deleteTransientKey($transient_key, $locale = false) {
         // Get the current list of transients.
         $transient_keys = $this->getTransientKeys($locale);
+
         $transient_keys = array_filter($transient_keys, function ($e) use ($transient_key) {
-            return ($e !== $transient_key);
+            return ($e != $transient_key);
         });
+
         $transient_keys = array_values($transient_keys);
         $this->setTransientKeys($transient_keys, $locale);
 
@@ -396,8 +400,6 @@ class FrcTransientManagerBase {
             $transientKeyLocale = $arr[1];
             $this->deleteTransient($transient, $transientKeyLocale, true);
         }
-        $transient_keys = array_values($transient_keys);
-        $this->setTransientKeys($transient_keys, $locale);
 
         return true;
     }
@@ -443,8 +445,6 @@ class FrcTransientManagerBase {
             }
             $this->deleteTransient($transient, $transientKeyLocale, true);
         }
-        $transient_keys = array_values($transient_keys);
-        $this->setTransientKeys($transient_keys, $locale);
 
         return true;
     }
