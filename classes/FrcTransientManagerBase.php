@@ -266,15 +266,17 @@ class FrcTransientManagerBase {
         $this->logMessage('locale: ' . $locale, $logFunction);
         $this->logMessage('add: ' . $new_transient_key, $logFunction);
 
+        if (in_array($new_transient_key, $transient_keys)) {
+            $this->logMessage('!!already in!!', $logFunction);
+        }
+
         if (!in_array($new_transient_key, $transient_keys)) {
             $transient_keys[] = $new_transient_key;
             $transient_keys   = array_values($transient_keys);
             $this->setTransientKeys($transient_keys, $locale);
         }
 
-        if (in_array($new_transient_key, $transient_keys)) {
-            $this->logMessage('!!already in!!', $logFunction);
-        }
+
         $this->logMessage('/======== ' . $logFunction . ' =========');
 
         return $transient_keys;
