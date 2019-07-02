@@ -93,7 +93,7 @@ class FrcTransientManagerBase {
 
     public function logMessage($message) {
         if ($this->log) {
-            error_log(print_r($message, true));
+            error_log(print_r('frc-transient-manager: '. $message, true));
         }
     }
 
