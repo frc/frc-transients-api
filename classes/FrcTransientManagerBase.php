@@ -74,7 +74,10 @@ class FrcTransientManagerBase {
         }
     }
 
-    function checkForRedisCache() {
+    /**
+     * @return bool
+     */
+    public function checkForRedisCache() {
         if (!wp_using_ext_object_cache()) {
             return false;
         }
