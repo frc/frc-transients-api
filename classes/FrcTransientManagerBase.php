@@ -17,6 +17,7 @@ use function getenv;
 use function in_array;
 use function is_preview;
 use function is_user_logged_in;
+use function method_exists;
 use function pll_languages_list;
 use function preg_grep;
 use function preg_quote;
@@ -81,11 +82,18 @@ class FrcTransientManagerBase {
         global $redisObjectCache;
         if (!isset($redisObjectCache) || empty($redisObjectCache)) {
             return false;
+        }
 
+        if (!method_exists($redisObjectCache, 'validate_object_cache_dropin') || !method_exists($redisObjectCache, 'get_redis_status')) {
+            return false;
         }
 
         if ($redisObjectCache->validate_object_cache_dropin()) {
             if ($redisObjectCache->get_redis_status()) {
+                global $wp_object_cache;
+                if (!method_exists($wp_object_cache, 'redis_instance')) {
+                    return false;
+                }
                 return true;
             }
         }
