@@ -24,6 +24,7 @@ use function preg_replace;
 use function print_r;
 use function set_transient;
 use function strlen;
+use function wp_using_ext_object_cache;
 
 if (!defined('ABSPATH')) {
     exit; // Exit if accessed directly.
@@ -48,6 +49,7 @@ class FrcTransientManagerBase {
     protected $acf_fields;
     protected $post_data;
     protected $log = false;
+    private $redis = false;
 
     /**
      * TransientObject constructor.
@@ -65,6 +67,30 @@ class FrcTransientManagerBase {
         $this->acf_fields       = [];
         $this->post_data        = [];
         $this->cache_messages   = $cache_messages;
+
+        if ($this->checkForRedisCache()) {
+            $this->redis = new FrcRedisObjectCacheList();
+        }
+    }
+
+    function checkForRedisCache() {
+        if (!wp_using_ext_object_cache()) {
+            return false;
+        }
+
+        global $redisObjectCache;
+        if (!isset($redisObjectCache) || empty($redisObjectCache)) {
+            return false;
+
+        }
+
+        if ($redisObjectCache->validate_object_cache_dropin()) {
+            if ($redisObjectCache->get_redis_status()) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -135,7 +161,7 @@ class FrcTransientManagerBase {
             $locale = $this->locale;
         }
 
-        return $this->db_prefix . '|' . $locale . '|';
+        return 'transientApi:' . $this->db_prefix . '|' . $locale . '|';
     }
 
     /**
@@ -202,13 +228,26 @@ class FrcTransientManagerBase {
         return $this->transientPrefix($locale) . $transient_name . $this->transientSuffix();
     }
 
+    public function findTransientKeys($key, $locale) {
+        if ($this->redis != false) {
+            return $this->redis->keys($this->transientPrefix($locale) . '*' . $key . '*');
+        } else {
+            error_log(print_r('falsely using redis, might be a bug', true));
+            die('falsely using redis, might be a bug');
+        }
+    }
+
     /**
      * @param bool|string $locale
      *
      * @return array
      */
     public function getTransientKeys($locale = false) {
-        return $this->getTransient($this->optionName(), $locale) ?: [];
+        if ($this->redis != false) {
+            return $this->redis->keys($this->transientPrefix($locale) . '*');
+        } else {
+            return $this->getTransient($this->optionName(), $locale) ?: [];
+        }
     }
 
     /**
@@ -232,6 +271,10 @@ class FrcTransientManagerBase {
      */
     protected function setTransientKeys($content = false, $locale = false) {
 
+        if ($this->redis != false) {
+            return $content;
+        }
+
         if (false === $content) {
             $content = [];
         }
@@ -244,7 +287,6 @@ class FrcTransientManagerBase {
         $this->logMessage('setTransientKeys locale: ' . $locale, $logFunction);
         $this->logMessage('setTransientKeys key: ' . $key, $logFunction);
         $this->logMessage('/======== ' . $logFunction . ' =========');
-
 
         set_transient($key, $content, 0);
 
@@ -259,9 +301,12 @@ class FrcTransientManagerBase {
      */
     protected function updateTransientKeys($new_transient_key, $locale = false) {
         $transient_keys = $this->getTransientKeys($locale);
+        if ($this->redis != false) {
+            return $transient_keys;
+        }
 
         $logFunction = 'updateTransientKeys';
-        $this->logMessage('========= '. $logFunction .' =========');
+        $this->logMessage('========= ' . $logFunction . ' =========');
         $this->logMessage('before count: ' . count($transient_keys), $logFunction);
         $this->logMessage('locale: ' . $locale, $logFunction);
         $this->logMessage('add: ' . $new_transient_key, $logFunction);
@@ -276,7 +321,6 @@ class FrcTransientManagerBase {
             $this->setTransientKeys($transient_keys, $locale);
         }
 
-
         $this->logMessage('/======== ' . $logFunction . ' =========');
 
         return $transient_keys;
@@ -290,15 +334,19 @@ class FrcTransientManagerBase {
      */
     protected function deleteTransientKey($transient_key, $locale = false) {
         // Get the current list of transients.
+
+        if ($this->redis != false) {
+            return true;
+        }
+
         $transient_keys = $this->getTransientKeys($locale);
 
-        $count = count($transient_keys);
+        $count       = count($transient_keys);
         $logFunction = 'deleteTransientKey';
         $this->logMessage('========= ' . $logFunction . ' =========');
         $this->logMessage('before count: ' . $count, $logFunction);
         $this->logMessage('locale: ' . $locale, $logFunction);
         $this->logMessage('remove: ' . $transient_key, $logFunction);
-
 
         $transient_keys = array_filter($transient_keys, function ($e) use ($transient_key) {
             return ($e != $transient_key);
@@ -313,7 +361,6 @@ class FrcTransientManagerBase {
             $this->logMessage('!!not found!!', $logFunction);
         }
         $this->logMessage('/======== ' . $logFunction . ' =========');
-
 
         return true;
     }
@@ -407,6 +454,7 @@ class FrcTransientManagerBase {
         } else {
             $key = $transient_name;
         }
+
         $this->deleteTransientKey($key, $locale);
 
         $logFunction = 'deleteTransient';
@@ -428,7 +476,6 @@ class FrcTransientManagerBase {
         $transient_keys = $this->getTransientKeys($locale);
         if (empty($transient_keys)) {
             $this->setTransientKeys([], $locale);
-
             return true;
         }
         foreach ($transient_keys as $t) {
@@ -461,9 +508,14 @@ class FrcTransientManagerBase {
         if (empty($post_id)) {
             return null;
         }
-        $transient_keys = $this->getTransientKeys($locale);
-        $input          = preg_quote('(' . $post_id . ')', '~'); // don't forget to quote input string!
-        $transients     = preg_grep('~' . $input . '~', $transient_keys);
+        if ($this->redis != false) {
+            $transients = $this->findTransientKeys('(' . $post_id . ')', $locale);
+        } else {
+            $transient_keys = $this->getTransientKeys($locale);
+            $input = preg_quote('(' . $post_id . ')', '~'); // don't forget to quote input string!
+            $transients = preg_grep('~' . $input . '~', $transient_keys);
+        }
+
         if (empty($transients)) {
             return null;
         }
@@ -487,16 +539,20 @@ class FrcTransientManagerBase {
             return null;
         }
 
-        $transient_keys = $this->getTransientKeys($locale);
-        //magic, don't touch
-        $input      = preg_quote($transient_name, '~');
-        $transients = preg_grep('~' . $input . '~', $transient_keys);
+        if ($this->redis != false) {
+            $transients = $this->findTransientKeys($transient_name, $locale);
+        } else {
+            $transient_keys = $this->getTransientKeys($locale);
+            $input      = preg_quote($transient_name, '~');
+            $transients = preg_grep('~' . $input . '~', $transient_keys);
+        }
 
         $logFunction = 'deleteTransientsLike';
         if (empty($transients)) {
-            $this->logMessage('========= '.$logFunction.' =========');
+            $this->logMessage('========= ' . $logFunction . ' =========');
             $this->logMessage('not found in transient keys list: ' . $transient_name, $logFunction);
-            $this->logMessage('/======== '.$logFunction.' =========');
+            $this->logMessage('/======== ' . $logFunction . ' =========');
+
             return null;
         }
 
