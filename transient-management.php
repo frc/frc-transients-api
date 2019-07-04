@@ -16,6 +16,7 @@ if (!defined('ABSPATH')) {
  */
 require_once dirname(__FILE__) . '/classes/FrcTransientManagerBase.php';
 require_once dirname(__FILE__) . '/classes/FrcTransientManagerFunctions.php';
+require_once dirname(__FILE__) . '/classes/FrcRedisObjectCacheList.php';
 
 function frcTransient() {
     $enable    = getenv('FRC_TRANSIENT_DISABLE') == 'true' ? false : true;
