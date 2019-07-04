@@ -2,24 +2,39 @@
 
 namespace Frc;
 
-use function get_post;
 use Frc;
 
-if (! defined('ABSPATH')) {
+use function call_user_func_array;
+use function defined;
+use function function_exists;
+use function get_post;
+use function intval;
+use function is_array;
+use function is_callable;
+use function is_int;
+use function is_null;
+use function md5;
+use function ob_get_clean;
+use function ob_start;
+use function str_replace;
+
+if (!defined('ABSPATH')) {
     exit; // Exit if accessed directly.
 }
+
 /**
  * Created by PhpStorm.
  * User: janneaalto
  * Date: 16/01/2018
  * Time: 13.38
  */
-
 class FrcTransientManagerFunctions extends FrcTransientManagerBase {
 
     protected static $instance = null;
 
-    public static function getInstance(bool $enable = true, bool $cache_messages = true, string $logged_in_suffix = '') {
+    public static function getInstance(bool $enable = true,
+        bool $cache_messages = true,
+        string $logged_in_suffix = '') {
         if (is_null(self::$instance)) {
             self::$instance = new self($enable, $cache_messages, $logged_in_suffix);
         }
@@ -59,7 +74,7 @@ class FrcTransientManagerFunctions extends FrcTransientManagerBase {
      */
     public function checkResponse($response) {
 
-        if (! is_array($response)) {
+        if (!is_array($response)) {
             return false;
         }
 
@@ -67,11 +82,11 @@ class FrcTransientManagerFunctions extends FrcTransientManagerBase {
             return false;
         }
 
-        if (! isset($response['response'])) {
+        if (!isset($response['response'])) {
             return false;
         }
 
-        if (! isset($response['response']['code'])) {
+        if (!isset($response['response']['code'])) {
             return false;
         }
 
@@ -91,9 +106,13 @@ class FrcTransientManagerFunctions extends FrcTransientManagerBase {
      *
      * @return bool
      */
-    public function theBufferFuncTransient($transient_name, $function, $args = [], $locale = false, $expiration = false) {
+    public function theBufferFuncTransient($transient_name,
+        $function,
+        $args = [],
+        $locale = false,
+        $expiration = false) {
 
-        if (! isset($transient_name) || ! is_callable($function)) {
+        if (!isset($transient_name) || !is_callable($function)) {
             return null;
         }
 
@@ -111,15 +130,19 @@ class FrcTransientManagerFunctions extends FrcTransientManagerBase {
      *
      * @return bool|string
      */
-    public function callBufferFuncTransient($transient_name, $function, $args = [], $locale = false, $expiration = false) {
+    public function callBufferFuncTransient($transient_name,
+        $function,
+        $args = [],
+        $locale = false,
+        $expiration = false) {
 
-        if (! isset($transient_name) || ! is_callable($function)) {
+        if (!isset($transient_name) || !is_callable($function)) {
             return null;
         }
 
         $output = $this->getTransient($transient_name, $locale);
 
-        if (! empty($output)) {
+        if (!empty($output)) {
             return $output;
         } else {
             if ($locale != false && $locale != $this->locale) {
@@ -151,7 +174,7 @@ class FrcTransientManagerFunctions extends FrcTransientManagerBase {
      */
     public function theFuncTransient($transient_name, $function, $args = [], $locale = false, $expiration = false) {
 
-        if (! isset($transient_name) || ! is_callable($function)) {
+        if (!isset($transient_name) || !is_callable($function)) {
             return null;
         }
 
@@ -171,13 +194,13 @@ class FrcTransientManagerFunctions extends FrcTransientManagerBase {
      */
     public function callFuncTransient($transient_name, $function, $args = [], $locale = false, $expiration = false) {
 
-        if (! $transient_name || ! is_callable($function)) {
+        if (!$transient_name || !is_callable($function)) {
             return null;
         }
 
         $output = $this->getTransient($transient_name, $locale);
 
-        if (! empty($output)) {
+        if (!empty($output)) {
             return $output;
         } else {
             if ($locale != false && $locale != $this->locale) {
@@ -204,7 +227,7 @@ class FrcTransientManagerFunctions extends FrcTransientManagerBase {
      */
     public function theFile($url, $query = [], $args = [], $expiration = false) {
 
-        if (! $url) {
+        if (!$url) {
             return null;
         }
 
@@ -223,7 +246,7 @@ class FrcTransientManagerFunctions extends FrcTransientManagerBase {
      */
     public function getFile($url, $query = [], $args = [], $expiration = false) {
 
-        if (! $url) {
+        if (!$url) {
             return null;
         }
 
@@ -232,12 +255,12 @@ class FrcTransientManagerFunctions extends FrcTransientManagerBase {
         $transient_name = md5($url);
         $output         = $this->getTransient($transient_name, $locale);
 
-        if (! empty($output)) {
+        if (!empty($output)) {
             return $output;
         } else {
             $output = wp_safe_remote_get($url, $args);
 
-            if (! $this->checkResponse($output)) {
+            if (!$this->checkResponse($output)) {
                 return null;
             }
 
@@ -249,6 +272,7 @@ class FrcTransientManagerFunctions extends FrcTransientManagerBase {
         if ($post_id == 'option') {
             return 'options';
         }
+
         return $post_id;
     }
 
@@ -262,7 +286,7 @@ class FrcTransientManagerFunctions extends FrcTransientManagerBase {
      */
     public function setAcfFields($post_id, $locale = false, $expiration = false, $fields = false) {
 
-        if (! $post_id) {
+        if (!$post_id) {
             return null;
         }
 
@@ -294,16 +318,16 @@ class FrcTransientManagerFunctions extends FrcTransientManagerBase {
             }
         }
 
-        if (! is_int($post_id) && intval($post_id) == 0) {
+        if (!is_int($post_id) && intval($post_id) == 0) {
             $post_locale = 'options';
         } else {
             $post_id = intval($post_id);
         }
 
         $this->setTransient($transient_name, $post_fields, $post_locale, $expiration);
-        $acf_fields                             = $this->getAcfFields($post_id, $post_locale);
-        $acf_fields[ $post_locale ][ $post_id ] = $post_fields;
-        $this->acf_fields                       = $acf_fields;
+        $acf_fields                         = $this->getAcfFields($post_id, $post_locale);
+        $acf_fields[$post_locale][$post_id] = $post_fields;
+        $this->acf_fields                   = $acf_fields;
 
         return $acf_fields;
     }
@@ -316,26 +340,26 @@ class FrcTransientManagerFunctions extends FrcTransientManagerBase {
      */
     protected function getAcfFields($post_id, $locale = false) {
 
-        if (! $post_id) {
+        if (!$post_id) {
             return null;
         }
 
-        if (! $locale) {
+        if (!$locale) {
             $locale = $this->getLocale();
         }
 
-        if (! is_int($post_id) && intval($post_id) == 0) {
+        if (!is_int($post_id) && intval($post_id) == 0) {
             $locale = 'options';
         } else {
             $post_id = intval($post_id);
         }
 
-        $transient_name                    = '(' . $post_id . ')-acf';
-        $post_fields                       = $this->getTransient($transient_name, $locale);
-        $acf_fields[ $locale ][ $post_id ] = $post_fields;
-        $this->acf_fields                  = $acf_fields;
+        $transient_name                = '(' . $post_id . ')-acf';
+        $post_fields                   = $this->getTransient($transient_name, $locale);
+        $acf_fields[$locale][$post_id] = $post_fields;
+        $this->acf_fields              = $acf_fields;
 
-        if (! empty($acf_fields) && isset($acf_fields[ $locale ][ $post_id ]) && ! empty($acf_fields[ $locale ][ $post_id ])) {
+        if (!empty($acf_fields) && isset($acf_fields[$locale][$post_id]) && !empty($acf_fields[$locale][$post_id])) {
             return $acf_fields;
         }
 
@@ -352,7 +376,7 @@ class FrcTransientManagerFunctions extends FrcTransientManagerBase {
      */
     public function theAcf($field, $post_id, $locale = false, $expiration = false) {
 
-        if (! $post_id || ! $field) {
+        if (!$post_id || !$field) {
             return null;
         }
 
@@ -373,7 +397,7 @@ class FrcTransientManagerFunctions extends FrcTransientManagerBase {
      */
     public function getAcf($field, $post_id, $locale = false, $expiration = false) {
 
-        if (! $post_id || ! $field) {
+        if (!$post_id || !$field) {
             return null;
         }
 
@@ -381,7 +405,7 @@ class FrcTransientManagerFunctions extends FrcTransientManagerBase {
 
         $acf_field = $this->getAcfField($field, $post_id, $locale, $this->acf_fields);
 
-        if (! $acf_field) {
+        if (!$acf_field) {
             $acf_field = $this->getAcfField($field, $post_id, $locale, $this->getAcfFields($post_id, $locale));
         }
 
@@ -389,11 +413,11 @@ class FrcTransientManagerFunctions extends FrcTransientManagerBase {
             return $acf_field;
         } else {
             //FU bbpress
-//            remove_action( 'pre_get_posts', 'bbp_pre_get_posts_normalize_forum_visibility', 4 );
+            //            remove_action( 'pre_get_posts', 'bbp_pre_get_posts_normalize_forum_visibility', 4 );
             $acf_field = get_field($field, $post_id);
-//            add_action( 'pre_get_posts', 'bbp_pre_get_posts_normalize_forum_visibility', 4 );
+            //            add_action( 'pre_get_posts', 'bbp_pre_get_posts_normalize_forum_visibility', 4 );
 
-            if (isset($acf_field) && ! empty($acf_field)) {
+            if (isset($acf_field) && !empty($acf_field)) {
                 return $this->setAcfField($acf_field, $field, $post_id, $this->acf_fields, $locale, $expiration);
             }
 
@@ -411,22 +435,22 @@ class FrcTransientManagerFunctions extends FrcTransientManagerBase {
      */
     protected function getAcfField($field, $post_id, $locale, $acf_fields) {
 
-        if (! $post_id || ! $field) {
+        if (!$post_id || !$field) {
             return null;
         }
 
-        if (! $locale) {
+        if (!$locale) {
             $locale = $this->getLocale();
         }
 
-        if (! is_int($post_id) && intval($post_id) == 0) {
+        if (!is_int($post_id) && intval($post_id) == 0) {
             $locale = 'options';
         } else {
             $post_id = intval($post_id);
         }
 
-        if (! empty($acf_fields) && isset($acf_fields[ $locale ][ $post_id ]) && ! empty($acf_fields[ $locale ][ $post_id ]) && isset($acf_fields[ $locale ][ $post_id ][ $field ]) && ! empty($acf_fields[ $locale ][ $post_id ][ $field ])) {
-            return $acf_fields[ $locale ][ $post_id ][ $field ];
+        if (!empty($acf_fields) && isset($acf_fields[$locale][$post_id]) && !empty($acf_fields[$locale][$post_id]) && isset($acf_fields[$locale][$post_id][$field]) && !empty($acf_fields[$locale][$post_id][$field])) {
+            return $acf_fields[$locale][$post_id][$field];
         }
 
         return null;
@@ -444,29 +468,27 @@ class FrcTransientManagerFunctions extends FrcTransientManagerBase {
      */
     protected function setAcfField($acf_field, $field, $post_id, $acf_fields, $locale = false, $expiration = false) {
 
-        if (! $post_id || ! $field || ! $acf_field || empty($acf_field)) {
+        if (!$post_id || !$field || !$acf_field || empty($acf_field)) {
             return null;
         }
 
-        if (! $locale) {
+        if (!$locale) {
             $locale = $this->getLocale();
         }
 
-        if (! is_int($post_id) && intval($post_id) == 0) {
+        if (!is_int($post_id) && intval($post_id) == 0) {
             $locale = 'options';
         } else {
             $post_id = intval($post_id);
         }
 
-        $acf_fields[ $locale ][ $post_id ][ $field ] = $acf_field;
-        $this->acf_fields                            = $acf_fields;
-        $transient_name                              = '(' . $post_id . ')-acf';
-        $this->setTransient($transient_name, $acf_fields[ $locale ][ $post_id ], $locale, $expiration);
+        $acf_fields[$locale][$post_id][$field] = $acf_field;
+        $this->acf_fields                      = $acf_fields;
+        $transient_name                        = '(' . $post_id . ')-acf';
+        $this->setTransient($transient_name, $acf_fields[$locale][$post_id], $locale, $expiration);
 
-        return $acf_fields[ $locale ][ $post_id ][ $field ];
+        return $acf_fields[$locale][$post_id][$field];
     }
-
-
 
     /**
      * @param string $transient_name
@@ -478,7 +500,7 @@ class FrcTransientManagerFunctions extends FrcTransientManagerBase {
      */
     public function setData($transient_name, $data, $locale = false, $expiration = false) {
 
-        if (! isset($transient_name) || ! isset($data)) {
+        if (!isset($transient_name) || !isset($data)) {
             return null;
         }
 
@@ -493,13 +515,13 @@ class FrcTransientManagerFunctions extends FrcTransientManagerBase {
      */
     public function getData($transient_name, $locale = false) {
 
-        if (! isset($transient_name)) {
+        if (!isset($transient_name)) {
             return null;
         }
 
         $output = $this->getTransient($transient_name, $locale);
 
-        if (! empty($output)) {
+        if (!empty($output)) {
             return $output;
         } else {
             return null;
