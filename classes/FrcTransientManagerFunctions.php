@@ -13,6 +13,7 @@ use function is_array;
 use function is_callable;
 use function is_int;
 use function is_null;
+use function is_numeric;
 use function md5;
 use function ob_get_clean;
 use function ob_start;
@@ -318,7 +319,7 @@ class FrcTransientManagerFunctions extends FrcTransientManagerBase {
             }
         }
 
-        if (!is_int($post_id) && intval($post_id) == 0) {
+        if (!is_numeric($post_id)) {
             $post_locale = 'options';
         } else {
             $post_id = intval($post_id);
@@ -348,7 +349,7 @@ class FrcTransientManagerFunctions extends FrcTransientManagerBase {
             $locale = $this->getLocale();
         }
 
-        if (!is_int($post_id) && intval($post_id) == 0) {
+        if (!is_numeric($post_id)) {
             $locale = 'options';
         } else {
             $post_id = intval($post_id);
@@ -443,7 +444,7 @@ class FrcTransientManagerFunctions extends FrcTransientManagerBase {
             $locale = $this->getLocale();
         }
 
-        if (!is_int($post_id) && intval($post_id) == 0) {
+        if (!is_numeric($post_id)) {
             $locale = 'options';
         } else {
             $post_id = intval($post_id);
@@ -476,7 +477,7 @@ class FrcTransientManagerFunctions extends FrcTransientManagerBase {
             $locale = $this->getLocale();
         }
 
-        if (!is_int($post_id) && intval($post_id) == 0) {
+        if (!is_numeric($post_id)) {
             $locale = 'options';
         } else {
             $post_id = intval($post_id);
