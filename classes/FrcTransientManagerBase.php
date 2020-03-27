@@ -24,8 +24,10 @@ use function preg_quote;
 use function preg_replace;
 use function print_r;
 use function set_transient;
-use function strlen;
+use function str_pad;
 use function wp_using_ext_object_cache;
+use const STR_PAD_LEFT;
+use const YEAR_IN_SECONDS;
 
 if (!defined('ABSPATH')) {
     exit; // Exit if accessed directly.
@@ -57,8 +59,9 @@ class FrcTransientManagerBase {
      *
      * @param bool $enable
      * @param bool $cache_messages
+     * @param string $logged_in_suffix
      */
-    protected function __construct($enable = true, $cache_messages = true, $logged_in_suffix = '') {
+    protected function __construct(bool $enable = true, bool $cache_messages = true, string $logged_in_suffix = '') {
 
         $this->db_prefix        = $this->dbPrefix();
         $this->locale           = $this->getLocale();
@@ -97,6 +100,7 @@ class FrcTransientManagerBase {
                 if (!method_exists($wp_object_cache, 'redis_instance')) {
                     return false;
                 }
+
                 return true;
             }
         }
@@ -487,6 +491,7 @@ class FrcTransientManagerBase {
         $transient_keys = $this->getTransientKeys($locale);
         if (empty($transient_keys)) {
             $this->setTransientKeys([], $locale);
+
             return true;
         }
         foreach ($transient_keys as $t) {
@@ -523,8 +528,8 @@ class FrcTransientManagerBase {
             $transients = $this->findTransientKeys('(' . $post_id . ')', $locale);
         } else {
             $transient_keys = $this->getTransientKeys($locale);
-            $input = preg_quote('(' . $post_id . ')', '~'); // don't forget to quote input string!
-            $transients = preg_grep('~' . $input . '~', $transient_keys);
+            $input          = preg_quote('(' . $post_id . ')', '~'); // don't forget to quote input string!
+            $transients     = preg_grep('~' . $input . '~', $transient_keys);
         }
 
         if (empty($transients)) {
@@ -554,8 +559,8 @@ class FrcTransientManagerBase {
             $transients = $this->findTransientKeys($transient_name, $locale);
         } else {
             $transient_keys = $this->getTransientKeys($locale);
-            $input      = preg_quote($transient_name, '~');
-            $transients = preg_grep('~' . $input . '~', $transient_keys);
+            $input          = preg_quote($transient_name, '~');
+            $transients     = preg_grep('~' . $input . '~', $transient_keys);
         }
 
         $logFunction = 'deleteTransientsLike';

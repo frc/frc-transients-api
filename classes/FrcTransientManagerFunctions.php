@@ -2,22 +2,26 @@
 
 namespace Frc;
 
-use Frc;
-
+use function add_query_arg;
 use function call_user_func_array;
 use function defined;
 use function function_exists;
-use function get_post;
+use function get_field;
+use function get_fields;
 use function intval;
 use function is_array;
 use function is_callable;
-use function is_int;
 use function is_null;
 use function is_numeric;
+use function is_wp_error;
 use function md5;
 use function ob_get_clean;
 use function ob_start;
+use function pll_get_post_language;
+use function restore_previous_locale;
 use function str_replace;
+use function switch_to_locale;
+use function wp_safe_remote_get;
 
 if (!defined('ABSPATH')) {
     exit; // Exit if accessed directly.
@@ -33,9 +37,14 @@ class FrcTransientManagerFunctions extends FrcTransientManagerBase {
 
     protected static $instance = null;
 
-    public static function getInstance(bool $enable = true,
-        bool $cache_messages = true,
-        string $logged_in_suffix = '') {
+    /**
+     * @param bool $enable
+     * @param bool $cache_messages
+     * @param string $logged_in_suffix
+     *
+     * @return FrcTransientManagerFunctions|null
+     */
+    public static function getInstance(bool $enable = true, bool $cache_messages = true, string $logged_in_suffix = '') {
         if (is_null(self::$instance)) {
             self::$instance = new self($enable, $cache_messages, $logged_in_suffix);
         }
@@ -269,6 +278,11 @@ class FrcTransientManagerFunctions extends FrcTransientManagerBase {
         }
     }
 
+    /**
+     * @param $post_id
+     *
+     * @return string
+     */
     private function normalizeAcfPostId($post_id) {
         if ($post_id == 'option') {
             return 'options';
